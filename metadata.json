@@ -1,0 +1,5 @@
+{
+  "name": "Upperfork Malaysia",
+  "description": "A web application to calculate and compare the Total Cost of Ownership (TCO) between diesel and battery-electric forklifts, with presets for common Malaysian scenarios.",
+  "requestFramePermissions": []
+}
