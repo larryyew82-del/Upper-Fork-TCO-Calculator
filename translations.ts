@@ -54,6 +54,7 @@ export const translations = {
     downloadReport: 'Download Report',
     saveScenario: 'Save Scenario',
     reference: 'Reference',
+    currency: 'Currency',
 
     // Scenario Management
     savedScenarios: 'Saved Scenarios',
@@ -194,6 +195,13 @@ export const translations = {
     ref_app_medium: 'Medium Duty (e.g., loading/unloading)',
     ref_app_heavy: 'Heavy Duty (e.g., continuous operation)',
     ref_app_medium_heavy: 'Medium to Heavy Duty',
+
+    ref_regional_title: '7. Regional Price Reference',
+    ref_regional_subtitle: 'Approximate energy costs for different regions (for estimation only).',
+    ref_table_region: 'Region',
+    ref_table_currency: 'Currency',
+    ref_table_diesel_price: 'Est. Diesel Price (per L)',
+    ref_table_elec_price: 'Est. Electricity Tariff (per kWh)',
   },
   zh: {
     // Auth
@@ -243,13 +251,14 @@ export const translations = {
     profileUpdateSuccess: '个人资料更新成功！',
 
     // Header
-    title: '叉车车队总拥有成本计算器',
+    title: 'Upper Fork 叉车成本计算器',
     subtitle: '计算您整个车队的总拥有成本。',
     choosePreset: '选择预设',
     reset: '重置',
     downloadReport: '下载报告',
     saveScenario: '保存方案',
     reference: '参考资料',
+    currency: '货币',
     
     // Scenario Management
     savedScenarios: '已保存的方案',
@@ -390,5 +399,12 @@ export const translations = {
     ref_app_medium: '中型工况 (例如, 装卸)',
     ref_app_heavy: '重型工况 (例如, 连续作业)',
     ref_app_medium_heavy: '中型至重型工况',
+
+    ref_regional_title: '7. 区域价格参考',
+    ref_regional_subtitle: '不同地区的近似能源成本（仅供估算）。',
+    ref_table_region: '地区',
+    ref_table_currency: '货币',
+    ref_table_diesel_price: '预估柴油价格 (每升)',
+    ref_table_elec_price: '预估电价 (每千瓦时)',
   }
 };

@@ -106,8 +106,21 @@ interface Preset {
 
 const DIESEL_EMISSIONS = { CO2_kg_per_L: 2.68, NOx_g_per_L: 30.0, SOx_g_per_L: 0.02, PM_g_per_L: 2.5 };
 
-// FIX: Update Scenario type to explicitly include the `name` property.
 type Scenario = { name: string } & Record<string, any>;
+
+const CURRENCIES: Record<string, { symbol: string, label: string }> = {
+    MYR: { symbol: 'RM', label: 'MYR' },
+    USD: { symbol: '$', label: 'USD' },
+    AUD: { symbol: 'A$', label: 'AUD' },
+    CNY: { symbol: '¥', label: 'CNY' },
+};
+
+const REGIONAL_PRICES = [
+    { region: 'Malaysia', currency: 'MYR', diesel: '3.02', electric: '0.55' },
+    { region: 'United States', currency: 'USD', diesel: '1.11', electric: '0.15' },
+    { region: 'Australia', currency: 'AUD', diesel: '2.00', electric: '0.30' },
+    { region: 'China', currency: 'CNY', diesel: '7.60', electric: '0.65' },
+];
 
 export default function App() {
   const { language, setLanguage, t } = useLanguage();
@@ -115,6 +128,9 @@ export default function App() {
   
   const [scenarios, setScenarios] = useState<Record<string, Scenario>>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currency, setCurrency] = useState('MYR');
+
+  const currencySymbol = CURRENCIES[currency].symbol;
 
   const PRESETS: Record<string, Preset> = {
     "1t-warehouse": {
@@ -269,7 +285,7 @@ export default function App() {
   const resetAll = () => applyPreset(presetKey);
 
   const results = useMemo(() => {
-    const fmtMYR = (n: number) => n.toLocaleString("en-MY", { style: "currency", currency: "MYR", maximumFractionDigits: 2 });
+    const fmtCurrency = (n: number) => n.toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US', { style: "currency", currency: currency, maximumFractionDigits: 2 });
     const clamp = (n: number, min: number, max: number) => Math.min(Math.max(n, min), max);
     
     const utilization = clamp(utilizationPct, 0, 100) / 100;
@@ -327,7 +343,7 @@ export default function App() {
     const totalMonthlyFinancialElectric = monthlyInstallmentElectric + monthlyInsurance;
 
     return {
-      fmtMYR,
+      fmtCurrency,
       activeHoursMonth,
       diesel: {
         total_month: diesel_total_month_unit * fleetSize,
@@ -375,7 +391,7 @@ export default function App() {
         }
       }
     };
-  }, Object.values(stateGetters));
+  }, [Object.values(stateGetters), currency, language]);
 
   return (
     <div className="min-h-screen w-full bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
@@ -391,7 +407,6 @@ export default function App() {
                 <div className="space-y-2 max-h-[calc(100vh-120px)] overflow-y-auto">
                     {Object.keys(scenarios).length === 0 ? (
                         <p className="text-sm text-slate-500 dark:text-slate-400">{t('noSavedScenarios')}</p>
-                    // FIX: Explicitly type the scenario object `s` to resolve type inference issues with `Object.values`.
                     ) : Object.values(scenarios).filter(s => s && (s as Scenario).name).map((s: Scenario) => (
                         <div key={s.name} className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700">
                             <p className="font-medium text-slate-800 dark:text-slate-200">{s.name}</p>
@@ -416,6 +431,18 @@ export default function App() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
+                    {/* Currency Selector */}
+                    <Select value={currency} onValueChange={setCurrency}>
+                      <SelectTrigger className="w-[85px] h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(CURRENCIES).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
                     <div className="flex items-center p-1 bg-slate-200 dark:bg-slate-700 rounded-lg">
                       <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${language === 'en' ? 'bg-white text-slate-900 dark:bg-slate-300 dark:text-slate-900 shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'}`}>EN</button>
                       <button onClick={() => setLanguage('zh')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${language === 'zh' ? 'bg-white text-slate-900 dark:bg-slate-300 dark:text-slate-900 shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'}`}>中文</button>
@@ -465,14 +492,14 @@ export default function App() {
                           <LabeledNumber label={`${t('utilization')} (%)`} value={utilizationPct} setValue={setUtilizationPct} step={1} min={0} max={100} />
                           
                           <SectionTitle title={t('diesel')} />
-                          <LabeledNumber label={`${t('dieselCapex')} (RM)`} value={dieselCapex} setValue={setDieselCapex} step={1000} min={0} />
+                          <LabeledNumber label={`${t('dieselCapex')} (${currencySymbol})`} value={dieselCapex} setValue={setDieselCapex} step={1000} min={0} />
                           <LabeledNumber label={`${t('fuelUse')} (L/hr)`} value={dieselLPerHour} setValue={setDieselLPerHour} step={0.1} min={0} />
-                          <LabeledNumber label={`${t('dieselPrice')} (RM/L)`} value={dieselPrice} setValue={setDieselPrice} step={0.01} min={0} />
+                          <LabeledNumber label={`${t('dieselPrice')} (${currencySymbol}/L)`} value={dieselPrice} setValue={setDieselPrice} step={0.01} min={0} />
 
                           <SectionTitle title={t('batteryElectric')} />
-                          <LabeledNumber label={`${t('electricCapex')} (RM)`} value={electricCapex} setValue={setElectricCapex} step={1000} min={0} />
+                          <LabeledNumber label={`${t('electricCapex')} (${currencySymbol})`} value={electricCapex} setValue={setElectricCapex} step={1000} min={0} />
                           <LabeledNumber label={`${t('energyUse')} (kWh/hr)`} value={elecKWhPerHour} setValue={setElecKWhPerHour} step={0.1} min={0} />
-                          <LabeledNumber label={`${t('tariff')} (RM/kWh)`} value={tariffRmPerKWh} setValue={setTariffRmPerKWh} step={0.01} min={0} />
+                          <LabeledNumber label={`${t('tariff')} (${currencySymbol}/kWh)`} value={tariffRmPerKWh} setValue={setTariffRmPerKWh} step={0.01} min={0} />
                         </div>
                       </TabsContent>
                       <TabsContent value="reference">
@@ -639,6 +666,34 @@ export default function App() {
                                       </table>
                                   </div>
                               </div>
+
+                              {/* Regional Price Guide Table */}
+                              <div className="space-y-2">
+                                  <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_regional_title')}</h5>
+                                  <p className="text-sm text-slate-600 dark:text-slate-400">{t('ref_regional_subtitle')}</p>
+                                  <div className="overflow-x-auto rounded-lg border dark:border-slate-700">
+                                      <table className="w-full text-left text-sm">
+                                          <thead className="bg-slate-50 dark:bg-slate-700/50">
+                                              <tr className="border-b dark:border-slate-700">
+                                                  <th className="p-2 font-medium">{t('ref_table_region')}</th>
+                                                  <th className="p-2 font-medium">{t('ref_table_currency')}</th>
+                                                  <th className="p-2 font-medium">{t('ref_table_diesel_price')}</th>
+                                                  <th className="p-2 font-medium">{t('ref_table_elec_price')}</th>
+                                              </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                            {REGIONAL_PRICES.map((item) => (
+                                                <tr key={item.region}>
+                                                    <td className="p-2 font-medium">{item.region}</td>
+                                                    <td className="p-2">{item.currency}</td>
+                                                    <td className="p-2">{item.diesel}</td>
+                                                    <td className="p-2">{item.electric}</td>
+                                                </tr>
+                                            ))}
+                                          </tbody>
+                                      </table>
+                                  </div>
+                              </div>
                             </div>
 
                         </div>
@@ -652,22 +707,22 @@ export default function App() {
                     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-100"><InfoIcon className="h-5 w-5"/> {t('advanced')}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <SectionTitle title={t('dieselAdvanced')} />
-                      <LabeledNumber label={`${t('dieselMaint')} (RM/hr)`} value={dieselMaintRmPerHour} setValue={setDieselMaintRmPerHour} step={0.5} min={0} />
+                      <LabeledNumber label={`${t('dieselMaint')} (${currencySymbol}/hr)`} value={dieselMaintRmPerHour} setValue={setDieselMaintRmPerHour} step={0.5} min={0} />
                       
                       <SectionTitle title={t('electricAdvanced')} />
-                      <LabeledNumber label={`${t('electricMaint')} (RM/hr)`} value={elecMaintRmPerHour} setValue={setElecMaintRmPerHour} step={0.5} min={0} />
+                      <LabeledNumber label={`${t('electricMaint')} (${currencySymbol}/hr)`} value={elecMaintRmPerHour} setValue={setElecMaintRmPerHour} step={0.5} min={0} />
                       <LabeledNumber label={`${t('gridIntensity')} (kg/kWh)`} value={gridCO2Intensity} setValue={setGridCO2Intensity} step={0.01} min={0} />
                       <LabeledNumber label={`${t('batteryVolt')} (V)`} value={batteryVolt} setValue={setBatteryVolt} step={1} min={12} />
                       <LabeledNumber label={`${t('batteryAh')} (Ah)`} value={batteryAh} setValue={setBatteryAh} step={10} min={50} />
                       <LabeledNumber label={`${t('usableDod')} (%)`} value={usableDoDPct} setValue={setUsableDoDPct} step={1} min={10} max={100} />
                       <LabeledNumber label={t('cyclesTo80')} value={cyclesTo80} setValue={setCyclesTo80} step={100} min={100} />
-                      <LabeledNumber label={`${t('batteryCost')} (RM)`} value={batteryReplacementCost} setValue={setBatteryReplacementCost} step={1000} min={0} />
+                      <LabeledNumber label={`${t('batteryCost')} (${currencySymbol})`} value={batteryReplacementCost} setValue={setBatteryReplacementCost} step={1000} min={0} />
 
                       <SectionTitle title={t('financialCalculations')} />
                       <LabeledNumber label={`${t('downpaymentPct')} (%)`} value={downpaymentPct} setValue={setDownpaymentPct} step={1} min={0} max={100} />
                       <LabeledNumber label={`${t('loanTenureMonths')} (${t('months')})`} value={loanTenureMonths} setValue={setLoanTenureMonths} step={1} min={1} />
                       <LabeledNumber label={`${t('annualInterestRatePct')} (%)`} value={annualInterestRatePct} setValue={setAnnualInterestRatePct} step={0.1} min={0} />
-                      <LabeledNumber label={`${t('annualInsuranceRM')} (RM/yr)`} value={annualInsuranceRM} setValue={setAnnualInsuranceRM} step={100} min={0} />
+                      <LabeledNumber label={`${t('annualInsuranceRM')} (${currencySymbol}/yr)`} value={annualInsuranceRM} setValue={setAnnualInsuranceRM} step={100} min={0} />
                     </div>
                   </CardContent>
                 </Card>
@@ -679,37 +734,37 @@ export default function App() {
                     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-100"><CalculatorIcon className="h-5 w-5"/> {t('fleetResults')}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                        <SummaryCard title={t('diesel')}>
-                         <KV label={t('tcoMonth')} value={results.fmtMYR(results.diesel.total_month)} />
-                         <KV label={t('tcoYear')} value={results.fmtMYR(results.diesel.total_year)} />
+                         <KV label={t('tcoMonth')} value={results.fmtCurrency(results.diesel.total_month)} />
+                         <KV label={t('tcoYear')} value={results.fmtCurrency(results.diesel.total_year)} />
                          <Separator className="my-2" />
                          <KV label={t('fuelUsedMonth')} value={`${results.diesel.diesel_L_month.toFixed(0)} L`} />
-                         <KV label={t('fuelCostMonth')} value={results.fmtMYR(results.diesel.energy_cost_month)} />
-                         <KV label={t('maintCostMonth')} value={results.fmtMYR(results.diesel.maint_cost_month)} />
+                         <KV label={t('fuelCostMonth')} value={results.fmtCurrency(results.diesel.energy_cost_month)} />
+                         <KV label={t('maintCostMonth')} value={results.fmtCurrency(results.diesel.maint_cost_month)} />
                          <Separator className="my-2" />
-                         <KV bold label={t('tco10Year')} value={results.fmtMYR(results.diesel.tco_10_year)} />
+                         <KV bold label={t('tco10Year')} value={results.fmtCurrency(results.diesel.tco_10_year)} />
                        </SummaryCard>
                        <SummaryCard title={t('batteryElectric')}>
-                         <KV label={t('tcoMonth')} value={results.fmtMYR(results.electric.total_month)} />
-                         <KV label={t('tcoYear')} value={results.fmtMYR(results.electric.total_year)} />
+                         <KV label={t('tcoMonth')} value={results.fmtCurrency(results.electric.total_month)} />
+                         <KV label={t('tcoYear')} value={results.fmtCurrency(results.electric.total_year)} />
                          <Separator className="my-2" />
                          <KV label={t('energyUsedMonth')} value={`${results.electric.kWh_month.toFixed(0)} kWh`} />
-                         <KV label={t('energyCostMonth')} value={results.fmtMYR(results.electric.energy_cost_month)} />
-                         <KV label={t('maintCostMonth')} value={results.fmtMYR(results.electric.maint_cost_month)} />
-                         <KV label={t('batteryAmortMonth')} value={results.fmtMYR(results.electric.amortized_battery_cost_month)} />
+                         <KV label={t('energyCostMonth')} value={results.fmtCurrency(results.electric.energy_cost_month)} />
+                         <KV label={t('maintCostMonth')} value={results.fmtCurrency(results.electric.maint_cost_month)} />
+                         <KV label={t('batteryAmortMonth')} value={results.fmtCurrency(results.electric.amortized_battery_cost_month)} />
                          <Separator className="my-2" />
                          <KV label={t('cyclesPerMonth')} value={results.electric.cycles_per_month.toFixed(1)} />
                          <KV label={t('estBatteryLife')} value={isFinite(results.electric.months_to_80) ? `${results.electric.months_to_80.toFixed(1)} ${t('months')}` : 'N/A'} />
                          <KV label={t('estReplacements10Yr')} value={results.electric.num_replacements_10_years.toFixed(0)} />
                          <Separator className="my-2" />
-                         <KV bold label={t('tco10Year')} value={results.fmtMYR(results.electric.tco_10_year)} />
+                         <KV bold label={t('tco10Year')} value={results.fmtCurrency(results.electric.tco_10_year)} />
                        </SummaryCard>
                     </div>
                      <Card className="mt-4 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50">
                        <CardContent className="p-4 md:p-6">
                          <h3 className="text-lg font-semibold mb-2 text-slate-900 dark:text-slate-100">{t('fleetSavingsTitle')}</h3>
                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                           <InfoBlock label={t('monthlySavings')} value={results.fmtMYR(results.savings.monthly_savings)} />
-                           <InfoBlock label={t('yearlySavings')} value={results.fmtMYR(results.savings.yearly_savings)} />
+                           <InfoBlock label={t('monthlySavings')} value={results.fmtCurrency(results.savings.monthly_savings)} />
+                           <InfoBlock label={t('yearlySavings')} value={results.fmtCurrency(results.savings.yearly_savings)} />
                            <InfoBlock label={t('paybackPeriod')} value={results.savings.payback_period_months > 0 ? `${results.savings.payback_period_months.toFixed(1)} ${t('months')}` : 'N/A'} />
                          </div>
                        </CardContent>
@@ -751,16 +806,16 @@ export default function App() {
                     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-100"><DollarSignIcon className="h-5 w-5"/> {t('financialResults')}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                        <SummaryCard title={t('diesel')}>
-                         <KV label={t('monthlyLoanInstallment')} value={results.fmtMYR(results.financial.diesel.monthlyInstallment)} />
-                         <KV label={t('monthlyInsurance')} value={results.fmtMYR(results.financial.diesel.monthlyInsurance)} />
+                         <KV label={t('monthlyLoanInstallment')} value={results.fmtCurrency(results.financial.diesel.monthlyInstallment)} />
+                         <KV label={t('monthlyInsurance')} value={results.fmtCurrency(results.financial.diesel.monthlyInsurance)} />
                          <Separator className="my-2" />
-                         <KV bold label={t('totalMonthlyFinancial')} value={results.fmtMYR(results.financial.diesel.totalMonthly)} />
+                         <KV bold label={t('totalMonthlyFinancial')} value={results.fmtCurrency(results.financial.diesel.totalMonthly)} />
                        </SummaryCard>
                        <SummaryCard title={t('batteryElectric')}>
-                         <KV label={t('monthlyLoanInstallment')} value={results.fmtMYR(results.financial.electric.monthlyInstallment)} />
-                         <KV label={t('monthlyInsurance')} value={results.fmtMYR(results.financial.electric.monthlyInsurance)} />
+                         <KV label={t('monthlyLoanInstallment')} value={results.fmtCurrency(results.financial.electric.monthlyInstallment)} />
+                         <KV label={t('monthlyInsurance')} value={results.fmtCurrency(results.financial.electric.monthlyInsurance)} />
                          <Separator className="my-2" />
-                         <KV bold label={t('totalMonthlyFinancial')} value={results.fmtMYR(results.financial.electric.totalMonthly)} />
+                         <KV bold label={t('totalMonthlyFinancial')} value={results.fmtCurrency(results.financial.electric.totalMonthly)} />
                        </SummaryCard>
                     </div>
                   </CardContent>
@@ -769,7 +824,7 @@ export default function App() {
               </div>
             </div>
             <footer className="mt-8 text-center text-xs text-slate-400 dark:text-slate-500">
-              <p>Version 1.3.5</p>
+              <p>Version 1.3.6</p>
             </footer>
           </div>
         </main>
