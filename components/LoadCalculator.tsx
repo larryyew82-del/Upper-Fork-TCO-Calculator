@@ -8,10 +8,18 @@ import { Separator } from './ui/Separator';
 import { useLanguage } from '../contexts/LanguageContext';
 import { RulerIcon, WeightIcon, AlertTriangleIcon, CheckCircleIcon, LightbulbIcon, TruckIcon, CalculatorIcon } from './icons';
 
-interface Recommendation {
-    title: string;
-    message: string;
+interface RecommendationData {
+    key: string;
+    params?: Record<string, string | number>;
 }
+
+interface ForkWarningData {
+    loadLen: number;
+    forkLen: number;
+    minLen: number;
+}
+
+type AttachmentType = 'none' | 'sideshifter' | 'positioner' | 'rotator' | 'bale_clamp' | 'paper_clamp' | 'push_pull' | 'custom';
 
 export default function LoadCalculator() {
     const { t } = useLanguage();
@@ -26,18 +34,36 @@ export default function LoadCalculator() {
     const [dimH, setDimH] = useState<number>(0);
     const [forkLength, setForkLength] = useState<number>(1070);
 
+    // Attachment Inputs
+    const [attachmentType, setAttachmentType] = useState<AttachmentType>('none');
+    const [attachmentWeight, setAttachmentWeight] = useState<number>(0);
+    const [attachmentET, setAttachmentET] = useState<number>(0); // Effective Thickness (Lost Load Center)
+
     // Results
     const [calculated, setCalculated] = useState(false);
     const [safeCap, setSafeCap] = useState(0);
     const [actualLC, setActualLC] = useState(0);
     const [ratedLC, setRatedLC] = useState(500);
     const [isSafe, setIsSafe] = useState(true);
-    const [forkWarning, setForkWarning] = useState<string | null>(null);
+    
+    // Store data for dynamic translation, instead of static strings
+    const [forkWarningData, setForkWarningData] = useState<ForkWarningData | null>(null);
     const [heightData, setHeightData] = useState<any[]>([]);
-    const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+    const [recommendationData, setRecommendationData] = useState<RecommendationData | null>(null);
 
     const forkliftOptions = [1500, 2000, 2500, 3000, 3500, 4000, 5000, 7000, 10000];
     const stackerOptions = [1500, 2000];
+
+    const attachmentDefaults: Record<AttachmentType, { w: number, et: number }> = {
+        none: { w: 0, et: 0 },
+        sideshifter: { w: 55, et: 50 },
+        positioner: { w: 100, et: 100 },
+        rotator: { w: 250, et: 150 },
+        bale_clamp: { w: 500, et: 200 },
+        paper_clamp: { w: 600, et: 200 },
+        push_pull: { w: 350, et: 180 },
+        custom: { w: 0, et: 0 }
+    };
 
     // Effect to handle machine type switching constraints
     useEffect(() => {
@@ -49,30 +75,52 @@ export default function LoadCalculator() {
         }
     }, [machineType]);
 
+    // Effect to update attachment defaults
+    useEffect(() => {
+        if (attachmentType !== 'custom') {
+            setAttachmentWeight(attachmentDefaults[attachmentType].w);
+            setAttachmentET(attachmentDefaults[attachmentType].et);
+        }
+    }, [attachmentType]);
+
     const calculate = () => {
         // Constants & Variables
         // Determine Rated Load Center (Standard rule: <5T = 500mm, >=5T = 600mm)
         const currentRatedLC = (tonnage >= 5000) ? 600 : 500;
         
-        // Determine 'C' (Lost Load Center)
+        // Determine 'C' (Front Overhang / Lost Load Center of machine)
         const cDim = (wheelbase === 'short') ? 400 : 480;
 
-        // Calculate Actual Load Center
-        const currentActualLC = dimL > 0 ? dimL / 2 : 0;
+        // Calculate Actual Load Center of the goods
+        const loadCG = dimL > 0 ? dimL / 2 : 0;
+        
+        // Effective Actual LC = Load CG + Attachment Effective Thickness
+        // The attachment pushes the load out by 'attachmentET'
+        const effectiveActualLC = loadCG + attachmentET;
 
         // Main Calculation Logic
-        let calculatedSafeCap = 0;
-        if (currentActualLC <= currentRatedLC) {
-            calculatedSafeCap = tonnage;
-        } else {
-            // Formula: RatedCap * (RatedLC + C) / (ActualLC + C)
-            calculatedSafeCap = (tonnage * (currentRatedLC + cDim)) / (currentActualLC + cDim);
+        // Net Capacity = (Available Moment / (effectiveActualLC + cDim)) - Attachment Weight
+        // Available Moment = Rated Capacity * (Rated LC + cDim)
+        
+        const availableMoment = tonnage * (currentRatedLC + cDim);
+        let grossCapacity = availableMoment / (effectiveActualLC + cDim);
+        
+        // If load is within rated load center, gross capacity is clamped to max tonnage (structural limit)
+        // But with attachment ET, we almost always exceed rated LC relative to fork face if ET > 0.
+        // However, if effectiveActualLC <= currentRatedLC, technically we could lift max tonnage, 
+        // BUT we still must subtract attachment weight.
+        if (effectiveActualLC <= currentRatedLC) {
+             grossCapacity = tonnage;
         }
-        calculatedSafeCap = Math.floor(calculatedSafeCap);
+
+        let calculatedSafeCap = Math.floor(grossCapacity - attachmentWeight);
+        
+        // Safety clamp: cannot be negative
+        if (calculatedSafeCap < 0) calculatedSafeCap = 0;
 
         // Update State
         setSafeCap(calculatedSafeCap);
-        setActualLC(currentActualLC);
+        setActualLC(loadCG); // Show the Load's CG, not the effective one, to the user? Or effective? usually users think of their load.
         setRatedLC(currentRatedLC);
         
         const safe = loadWeight > 0 && loadWeight <= calculatedSafeCap;
@@ -80,14 +128,14 @@ export default function LoadCalculator() {
 
         // Fork Length Check
         const minForkLen = dimL * 0.66;
-        if (dimL > 0 && forkLength < minForkLen) {
-            setForkWarning(t('forkWarningText')
-                .replace('{loadLen}', dimL.toString())
-                .replace('{forkLen}', forkLength.toString())
-                .replace('{minLen}', Math.floor(minForkLen).toString())
-            );
+        if (dimL > 0 && forkLength < minForkLen && attachmentType !== 'push_pull') {
+            setForkWarningData({
+                loadLen: dimL,
+                forkLen: forkLength,
+                minLen: Math.floor(minForkLen)
+            });
         } else {
-            setForkWarning(null);
+            setForkWarningData(null);
         }
 
         // Generate Height Table
@@ -113,22 +161,30 @@ export default function LoadCalculator() {
 
         // Recommendation Logic
         if (!safe) {
-            findBetterMachine(loadWeight, currentActualLC, currentRatedLC, cDim, tonnage, machineType);
+            findBetterMachine(loadWeight, effectiveActualLC, currentRatedLC, cDim, tonnage, machineType, attachmentWeight);
         } else {
-            setRecommendation(null);
+            setRecommendationData(null);
         }
 
         setCalculated(true);
     };
 
-    const findBetterMachine = (targetWeight: number, actualLC: number, ratedLC: number, cDim: number, currentCap: number, type: string) => {
+    const findBetterMachine = (targetWeight: number, effectiveActualLC: number, ratedLC: number, cDim: number, currentCap: number, type: string, attachW: number) => {
+        // We need to find a machine where:
+        // (MachineCap * (MachineRatedLC + cDim)) / (effectiveActualLC + cDim) - attachW >= targetWeight
+        // So: MachineCap >= (targetWeight + attachW) * (effectiveActualLC + cDim) / (MachineRatedLC + cDim)
+
         // Scenario 1: Stacker Insufficient
         if (type === 'stacker') {
-            const maxStackerCap = (2000 * (ratedLC + cDim)) / (actualLC + cDim);
-            if (targetWeight > maxStackerCap) {
-                setRecommendation({
-                    title: t('recommendationTitle'),
-                    message: t('recommendationStacker').replace('{cap}', Math.floor(maxStackerCap).toString())
+            const reqCap = (targetWeight + attachW) * (effectiveActualLC + cDim) / (ratedLC + cDim);
+             // Stacker max is 2000
+            if (reqCap > 2000) {
+                 // Calculate what a 2T stacker could actually lift to show in message
+                 const maxStackerNet = (2000 * (ratedLC + cDim)) / (effectiveActualLC + cDim) - attachW;
+                 
+                setRecommendationData({
+                    key: 'recommendationStacker',
+                    params: { cap: Math.floor(Math.max(0, maxStackerNet)) }
                 });
                 return;
             }
@@ -138,38 +194,67 @@ export default function LoadCalculator() {
         let searchList = forkliftOptions;
         let suggestion = 0;
         let found = false;
+        let suggestionNetCap = 0;
 
         for (let cap of searchList) {
             if (cap <= currentCap) continue;
 
             let tempRatedLC = (cap >= 5000) ? 600 : 500;
-            let capacityAtLC = (cap * (tempRatedLC + cDim)) / (actualLC + cDim);
+            // Check capacity
+            let gross = (cap * (tempRatedLC + cDim)) / (effectiveActualLC + cDim);
+            if (effectiveActualLC <= tempRatedLC) gross = cap;
             
-            if (capacityAtLC >= targetWeight) {
+            let net = Math.floor(gross - attachW);
+            
+            if (net >= targetWeight) {
                 suggestion = cap;
+                suggestionNetCap = net;
                 found = true;
                 break;
             }
         }
 
         if (found) {
-            // Recommendation name logic: if it was a stacker but needs huge capacity, suggest forklift.
-            // If it was IC forklift, we just suggest a bigger "Forklift" (generic).
-            let unitName = (suggestion >= 1500 && type === 'stacker' && suggestion <= 2000) ? "Stacker" : "Forklift";
+            // Determine unit type key for translation
+            let unitTypeKey = (suggestion >= 1500 && type === 'stacker' && suggestion <= 2000) ? "unitStacker" : "unitForklift";
             
-            setRecommendation({
-                title: t('recommendationTitle'),
-                message: t('recommendationUpgrade')
-                    .replace('{ton}', (suggestion/1000).toFixed(1))
-                    .replace('{type}', unitName)
-                    .replace('{cap}', Math.floor((suggestion * (ratedLC + cDim)) / (actualLC + cDim)).toString())
+            setRecommendationData({
+                key: 'recommendationUpgrade',
+                params: {
+                    ton: (suggestion/1000).toFixed(1),
+                    typeKey: unitTypeKey,
+                    cap: suggestionNetCap
+                }
             });
         } else {
-            setRecommendation({
-                title: t('recommendationTitle'),
-                message: t('recommendationFail')
+            setRecommendationData({ key: 'recommendationFail' });
+        }
+    };
+
+    const getRecommendationMessage = () => {
+        if (!recommendationData) return null;
+        let msg = t(recommendationData.key);
+        if (recommendationData.params) {
+            Object.entries(recommendationData.params).forEach(([k, v]) => {
+                let val = v;
+                // Special handling for the 'type' placeholder which maps to 'typeKey' param
+                if (k === 'typeKey') {
+                    val = t(v as string);
+                    msg = msg.replace('{type}', String(val));
+                } else {
+                    msg = msg.replace(`{${k}}`, String(val));
+                }
             });
         }
+        return msg;
+    };
+
+    const getForkWarningMessage = () => {
+        if (!forkWarningData) return null;
+        return t('forkWarningText')
+            .replace('{loadLen}', forkWarningData.loadLen.toString())
+            .replace('{forkLen}', forkWarningData.forkLen.toString())
+            .replace('{minLen}', forkWarningData.minLen.toString());
     };
 
     return (
@@ -216,6 +301,45 @@ export default function LoadCalculator() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        
+                        <Separator className="my-4"/>
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('attachment')}</h3>
+                        
+                         <div className="space-y-1.5">
+                            <Label>{t('attachmentType')}</Label>
+                            <Select value={attachmentType} onValueChange={(v: any) => setAttachmentType(v)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">{t('type_none')}</SelectItem>
+                                    <SelectItem value="sideshifter">{t('type_sideshifter')}</SelectItem>
+                                    <SelectItem value="positioner">{t('type_positioner')}</SelectItem>
+                                    <SelectItem value="rotator">{t('type_rotator')}</SelectItem>
+                                    <SelectItem value="bale_clamp">{t('type_bale_clamp')}</SelectItem>
+                                    <SelectItem value="paper_clamp">{t('type_paper_clamp')}</SelectItem>
+                                    <SelectItem value="push_pull">{t('type_push_pull')}</SelectItem>
+                                    <SelectItem value="custom">{t('type_custom')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-1.5">
+                                <Label>{t('attachmentWeight')}</Label>
+                                <Input type="number" value={attachmentWeight} onChange={(e) => {
+                                    setAttachmentWeight(Number(e.target.value));
+                                    if(attachmentType !== 'custom') setAttachmentType('custom');
+                                }} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label>{t('effectiveThickness')}</Label>
+                                <Input type="number" value={attachmentET} onChange={(e) => {
+                                    setAttachmentET(Number(e.target.value));
+                                    if(attachmentType !== 'custom') setAttachmentType('custom');
+                                }} />
+                            </div>
+                        </div>
+
+                        <Separator className="my-4"/>
 
                         <div className="space-y-1.5">
                             <Label>{t('weightOfGoods')}</Label>
@@ -301,15 +425,21 @@ export default function LoadCalculator() {
                             <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2"><RulerIcon className="h-4 w-4"/> {t('loadCenterOffset')}</span>
                             <span className="font-bold text-slate-700 dark:text-slate-300">{actualLC} mm</span>
                         </div>
+                        {attachmentET > 0 && (
+                            <div className="flex justify-between mb-1">
+                                <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2 pl-6">+ {t('effectiveThickness')}</span>
+                                <span className="font-bold text-slate-700 dark:text-slate-300">{attachmentET} mm</span>
+                            </div>
+                        )}
                         <div className="text-xs text-slate-400 text-right">
                             ({t('standardForMachine')}: {ratedLC} mm)
                         </div>
                     </div>
 
-                    {forkWarning && (
+                    {forkWarningData && (
                         <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-400 p-3 mb-4 text-sm rounded-r">
                             <p className="font-bold flex items-center gap-2"><AlertTriangleIcon className="h-4 w-4"/> {t('forkWarningTitle')}</p>
-                            <p>{forkWarning}</p>
+                            <p>{getForkWarningMessage()}</p>
                         </div>
                     )}
 
@@ -337,10 +467,10 @@ export default function LoadCalculator() {
                         </table>
                     </div>
 
-                    {recommendation && (
+                    {recommendationData && (
                         <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm">
-                            <h4 className="font-bold text-blue-800 dark:text-blue-300 mb-1 flex items-center gap-2"><LightbulbIcon className="h-4 w-4"/> {recommendation.title}</h4>
-                            <p className="text-blue-900 dark:text-blue-200">{recommendation.message}</p>
+                            <h4 className="font-bold text-blue-800 dark:text-blue-300 mb-1 flex items-center gap-2"><LightbulbIcon className="h-4 w-4"/> {t('recommendationTitle')}</h4>
+                            <p className="text-blue-900 dark:text-blue-200">{getRecommendationMessage()}</p>
                         </div>
                     )}
                 </CardContent>
