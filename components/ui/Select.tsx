@@ -9,6 +9,7 @@ interface SelectContextType {
   selectedLabel: ReactNode | null;
   setSelectedLabel: React.Dispatch<React.SetStateAction<ReactNode | null>>;
   onValueChange?: (value: string) => void;
+  disabled?: boolean;
 }
 
 const SelectContext = createContext<SelectContextType | null>(null);
@@ -30,7 +31,7 @@ const useOnClickOutside = (ref: React.RefObject<HTMLElement>, handler: (event: M
   }, [ref, handler]);
 };
 
-export const Select = ({ value, onValueChange, children }: { value: string, onValueChange: (value: string) => void, children?: ReactNode }) => {
+export const Select = ({ value, onValueChange, children, disabled }: { value: string, onValueChange: (value: string) => void, children?: ReactNode, disabled?: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState<string | null>(value);
   const [selectedLabel, setSelectedLabel] = useState<ReactNode | null>(null);
@@ -56,7 +57,7 @@ export const Select = ({ value, onValueChange, children }: { value: string, onVa
   }, [value, children]);
 
   return (
-    <SelectContext.Provider value={{ isOpen, setIsOpen, selectedValue, setSelectedValue, selectedLabel, setSelectedLabel, onValueChange }}>
+    <SelectContext.Provider value={{ isOpen, setIsOpen, selectedValue, setSelectedValue, selectedLabel, setSelectedLabel, onValueChange, disabled }}>
       <div className="relative" ref={selectRef}>
         {children}
       </div>
@@ -67,11 +68,13 @@ export const Select = ({ value, onValueChange, children }: { value: string, onVa
 export const SelectTrigger = ({ children, className }: { children?: ReactNode, className?: string }) => {
   const context = useContext(SelectContext);
   if (!context) throw new Error("SelectTrigger must be used within a Select");
-  const { setIsOpen } = context;
+  const { setIsOpen, disabled } = context;
 
   return (
     <button
-      onClick={() => setIsOpen(prev => !prev)}
+      type="button"
+      disabled={disabled}
+      onClick={() => !disabled && setIsOpen(prev => !prev)}
       className={`flex h-10 w-full items-center justify-between rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 disabled:cursor-not-allowed disabled:opacity-50 ${className || ''}`}
     >
       {children}

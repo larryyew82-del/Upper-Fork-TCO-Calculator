@@ -8,9 +8,10 @@ import { Switch } from "./components/ui/Switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./components/ui/Select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/Tabs";
 import { Separator } from "./components/ui/Separator";
-import { InfoIcon, CalculatorIcon, RefreshCwIcon, LeafIcon, MoonIcon, SunIcon, FileDownIcon, Trash2Icon, MenuIcon, XIcon, DollarSignIcon, CheckIcon, SaveIcon } from "./components/icons";
+import { InfoIcon, CalculatorIcon, RefreshCwIcon, LeafIcon, MoonIcon, SunIcon, FileDownIcon, Trash2Icon, MenuIcon, XIcon, DollarSignIcon, CheckIcon, SaveIcon, TruckIcon, WeightIcon } from "./components/icons";
 import { useLanguage } from "./contexts/LanguageContext";
 import { useTheme } from "./contexts/ThemeContext";
+import LoadCalculator from "./components/LoadCalculator";
 
 // --- Helper Components ---
 
@@ -129,6 +130,9 @@ export default function App() {
   const [scenarios, setScenarios] = useState<Record<string, Scenario>>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currency, setCurrency] = useState('MYR');
+  
+  // Navigation State
+  const [currentView, setCurrentView] = useState<'tco' | 'load'>('tco');
 
   const currencySymbol = CURRENCIES[currency].symbol;
 
@@ -252,6 +256,8 @@ export default function App() {
         }
       }
       setIsSidebarOpen(false);
+      // Ensure we switch back to TCO view when loading a TCO scenario
+      setCurrentView('tco');
     }
   };
 
@@ -426,22 +432,42 @@ export default function App() {
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)} className="lg:hidden"><MenuIcon className="h-6 w-6"/></Button>
-                    <div>
+                    <div className="flex flex-col">
                         <h1 className="text-xl font-medium tracking-tight text-slate-900 dark:text-slate-100">{t('title')}</h1>
+                        {/* View Switcher Mobile/Tablet */}
+                         <div className="flex gap-4 mt-1 md:hidden text-xs">
+                             <button onClick={() => setCurrentView('tco')} className={`${currentView === 'tco' ? 'text-blue-600 font-bold dark:text-blue-400' : 'text-slate-500'}`}>{t('tcoCalc')}</button>
+                             <button onClick={() => setCurrentView('load')} className={`${currentView === 'load' ? 'text-blue-600 font-bold dark:text-blue-400' : 'text-slate-500'}`}>{t('loadCalc')}</button>
+                         </div>
                     </div>
                 </div>
+                
                 <div className="flex items-center gap-2 flex-wrap">
+                    {/* View Switcher Desktop */}
+                    <div className="hidden md:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg mr-4">
+                         <button onClick={() => setCurrentView('tco')} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${currentView === 'tco' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
+                            <CalculatorIcon className="h-4 w-4"/>
+                            {t('tcoCalc')}
+                         </button>
+                         <button onClick={() => setCurrentView('load')} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${currentView === 'load' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
+                             <WeightIcon className="h-4 w-4"/>
+                            {t('loadCalc')}
+                         </button>
+                    </div>
+
                     {/* Currency Selector */}
-                    <Select value={currency} onValueChange={setCurrency}>
-                      <SelectTrigger className="w-[85px] h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(CURRENCIES).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {currentView === 'tco' && (
+                        <Select value={currency} onValueChange={setCurrency}>
+                        <SelectTrigger className="w-[85px] h-9">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.entries(CURRENCIES).map(([k, v]) => (
+                            <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    )}
 
                     <div className="flex items-center p-1 bg-slate-200 dark:bg-slate-700 rounded-lg">
                       <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${language === 'en' ? 'bg-white text-slate-900 dark:bg-slate-300 dark:text-slate-900 shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'}`}>EN</button>
@@ -453,378 +479,392 @@ export default function App() {
                     </Button>
                 </div>
               </div>
-              <div className="mt-4 flex flex-col md:flex-row md:items-center gap-3">
-                <Select value={presetKey} onValueChange={(v) => applyPreset(v)}>
-                  <SelectTrigger className="w-full md:w-[260px]">
-                    <SelectValue placeholder={t('choosePreset')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PRESETS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>
-                        {t(v.name)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex-1 flex gap-2">
-                    <Button variant="secondary" onClick={resetAll} className="gap-2 w-full md:w-auto"><RefreshCwIcon className="h-4 w-4"/>{t('reset')}</Button>
-                    <Button onClick={() => window.print()} className="gap-2 w-full md:w-auto"><FileDownIcon className="h-4 w-4"/>{t('downloadReport')}</Button>
-                </div>
-              </div>
+              
+              {currentView === 'tco' && (
+                  <div className="mt-4 flex flex-col md:flex-row md:items-center gap-3">
+                    <Select value={presetKey} onValueChange={(v) => applyPreset(v)}>
+                    <SelectTrigger className="w-full md:w-[260px]">
+                        <SelectValue placeholder={t('choosePreset')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {Object.entries(PRESETS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>
+                            {t(v.name)}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <div className="flex-1 flex gap-2">
+                        <Button variant="secondary" onClick={resetAll} className="gap-2 w-full md:w-auto"><RefreshCwIcon className="h-4 w-4"/>{t('reset')}</Button>
+                        <Button onClick={() => window.print()} className="gap-2 w-full md:w-auto"><FileDownIcon className="h-4 w-4"/>{t('downloadReport')}</Button>
+                    </div>
+                  </div>
+              )}
             </header>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-6">
-                <Card className="rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 no-print">
-                  <CardContent className="p-6">
-                    <Tabs defaultValue="basic">
-                      <TabsList className="mb-4">
-                        <TabsTrigger value="basic">{t('basic')}</TabsTrigger>
-                        <TabsTrigger value="reference">{t('reference')}</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="basic">
-                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <SectionTitle title={t('common')} />
-                          <LabeledNumber label={t('numForklifts')} value={numberOfForklifts} setValue={setNumberOfForklifts} step={1} min={1} />
-                          <LabeledNumber label={`${t('capacity')} (t)`} value={capacityTon} setValue={setCapacityTon} step={0.1} min={1} max={20} />
-                          <LabeledNumber label={t('hoursPerDay')} value={hoursPerDay} setValue={setHoursPerDay} step={0.5} min={0} max={24} />
-                          <LabeledNumber label={t('daysPerMonth')} value={daysPerMonth} setValue={setDaysPerMonth} step={1} min={0} max={31} />
-                          <LabeledNumber label={`${t('utilization')} (%)`} value={utilizationPct} setValue={setUtilizationPct} step={1} min={0} max={100} />
-                          
-                          <SectionTitle title={t('diesel')} />
-                          <LabeledNumber label={`${t('dieselCapex')} (${currencySymbol})`} value={dieselCapex} setValue={setDieselCapex} step={1000} min={0} />
-                          <LabeledNumber label={`${t('fuelUse')} (L/hr)`} value={dieselLPerHour} setValue={setDieselLPerHour} step={0.1} min={0} />
-                          <LabeledNumber label={`${t('dieselPrice')} (${currencySymbol}/L)`} value={dieselPrice} setValue={setDieselPrice} step={0.01} min={0} />
-
-                          <SectionTitle title={t('batteryElectric')} />
-                          <LabeledNumber label={`${t('electricCapex')} (${currencySymbol})`} value={electricCapex} setValue={setElectricCapex} step={1000} min={0} />
-                          <LabeledNumber label={`${t('energyUse')} (kWh/hr)`} value={elecKWhPerHour} setValue={setElecKWhPerHour} step={0.1} min={0} />
-                          <LabeledNumber label={`${t('tariff')} (${currencySymbol}/kWh)`} value={tariffRmPerKWh} setValue={setTariffRmPerKWh} step={0.01} min={0} />
-                        </div>
-                      </TabsContent>
-                      <TabsContent value="reference">
-                        <div className="space-y-4 text-sm text-slate-700 dark:text-slate-300 max-h-[600px] overflow-y-auto pr-2">
-                            <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">{t('ref_title')}</h4>
+            {/* TCO Calculator View */}
+            {currentView === 'tco' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-6">
+                    <Card className="rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 no-print">
+                    <CardContent className="p-6">
+                        <Tabs defaultValue="basic">
+                        <TabsList className="mb-4">
+                            <TabsTrigger value="basic">{t('basic')}</TabsTrigger>
+                            <TabsTrigger value="reference">{t('reference')}</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="basic">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <SectionTitle title={t('common')} />
+                            <LabeledNumber label={t('numForklifts')} value={numberOfForklifts} setValue={setNumberOfForklifts} step={1} min={1} />
+                            <LabeledNumber label={`${t('capacity')} (t)`} value={capacityTon} setValue={setCapacityTon} step={0.1} min={1} max={20} />
+                            <LabeledNumber label={t('hoursPerDay')} value={hoursPerDay} setValue={setHoursPerDay} step={0.5} min={0} max={24} />
+                            <LabeledNumber label={t('daysPerMonth')} value={daysPerMonth} setValue={setDaysPerMonth} step={1} min={0} max={31} />
+                            <LabeledNumber label={`${t('utilization')} (%)`} value={utilizationPct} setValue={setUtilizationPct} step={1} min={0} max={100} />
                             
-                            <div className="space-y-1">
-                                <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_tco_q')}</h5>
-                                <p>{t('ref_tco_a')}</p>
-                            </div>
+                            <SectionTitle title={t('diesel')} />
+                            <LabeledNumber label={`${t('dieselCapex')} (${currencySymbol})`} value={dieselCapex} setValue={setDieselCapex} step={1000} min={0} />
+                            <LabeledNumber label={`${t('fuelUse')} (L/hr)`} value={dieselLPerHour} setValue={setDieselLPerHour} step={0.1} min={0} />
+                            <LabeledNumber label={`${t('dieselPrice')} (${currencySymbol}/L)`} value={dieselPrice} setValue={setDieselPrice} step={0.01} min={0} />
 
-                            <div className="space-y-1">
-                                <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_capex_q')}</h5>
-                                <p>{t('ref_capex_a')}</p>
-                                <ul className="list-disc pl-5 space-y-1">
-                                    <li><strong>{t('diesel')}:</strong> {t('ref_capex_diesel')}</li>
-                                    <li><strong>{t('batteryElectric')}:</strong> {t('ref_capex_electric')}</li>
-                                </ul>
+                            <SectionTitle title={t('batteryElectric')} />
+                            <LabeledNumber label={`${t('electricCapex')} (${currencySymbol})`} value={electricCapex} setValue={setElectricCapex} step={1000} min={0} />
+                            <LabeledNumber label={`${t('energyUse')} (kWh/hr)`} value={elecKWhPerHour} setValue={setElecKWhPerHour} step={0.1} min={0} />
+                            <LabeledNumber label={`${t('tariff')} (${currencySymbol}/kWh)`} value={tariffRmPerKWh} setValue={setTariffRmPerKWh} step={0.01} min={0} />
                             </div>
-                            
-                            <div className="space-y-1">
-                                <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_opex_q')}</h5>
-                                <p>{t('ref_opex_a')}</p>
-                                <div className="pl-4 space-y-2 mt-2">
-                                    <p className="font-medium">{t('ref_opex_fuel_title')}</p>
-                                    <ul className="list-disc pl-5 space-y-1">
-                                        <li><strong>{t('diesel')}:</strong> {t('ref_opex_fuel_diesel')}</li>
-                                        <li><strong>{t('batteryElectric')}:</strong> {t('ref_opex_fuel_electric')}</li>
-                                    </ul>
-                                    <p className="font-medium">{t('ref_opex_maint_title')}</p>
-                                    <ul className="list-disc pl-5 space-y-1">
-                                        <li><strong>{t('diesel')}:</strong> {t('ref_opex_maint_diesel')}</li>
-                                        <li><strong>{t('batteryElectric')}:</strong> {t('ref_opex_maint_electric')}</li>
-                                    </ul>
-                                    <p className="font-medium">{t('ref_opex_battery_title')}</p>
-                                    <p className="pl-5">{t('ref_opex_battery_a')}</p>
+                        </TabsContent>
+                        <TabsContent value="reference">
+                            <div className="space-y-4 text-sm text-slate-700 dark:text-slate-300 max-h-[600px] overflow-y-auto pr-2">
+                                <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">{t('ref_title')}</h4>
+                                
+                                <div className="space-y-1">
+                                    <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_tco_q')}</h5>
+                                    <p>{t('ref_tco_a')}</p>
                                 </div>
-                            </div>
 
-                            <div className="space-y-1">
-                                <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_esg_q')}</h5>
-                                <p>{t('ref_esg_a')}</p>
-                                <ul className="list-disc pl-5 space-y-1">
-                                    <li><strong>{t('diesel')}:</strong> {t('ref_esg_diesel')}</li>
-                                    <li><strong>{t('batteryElectric')}:</strong> {t('ref_esg_electric')}</li>
-                                </ul>
-                            </div>
+                                <div className="space-y-1">
+                                    <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_capex_q')}</h5>
+                                    <p>{t('ref_capex_a')}</p>
+                                    <ul className="list-disc pl-5 space-y-1">
+                                        <li><strong>{t('diesel')}:</strong> {t('ref_capex_diesel')}</li>
+                                        <li><strong>{t('batteryElectric')}:</strong> {t('ref_capex_electric')}</li>
+                                    </ul>
+                                </div>
+                                
+                                <div className="space-y-1">
+                                    <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_opex_q')}</h5>
+                                    <p>{t('ref_opex_a')}</p>
+                                    <div className="pl-4 space-y-2 mt-2">
+                                        <p className="font-medium">{t('ref_opex_fuel_title')}</p>
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            <li><strong>{t('diesel')}:</strong> {t('ref_opex_fuel_diesel')}</li>
+                                            <li><strong>{t('batteryElectric')}:</strong> {t('ref_opex_fuel_electric')}</li>
+                                        </ul>
+                                        <p className="font-medium">{t('ref_opex_maint_title')}</p>
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            <li><strong>{t('diesel')}:</strong> {t('ref_opex_maint_diesel')}</li>
+                                            <li><strong>{t('batteryElectric')}:</strong> {t('ref_opex_maint_electric')}</li>
+                                        </ul>
+                                        <p className="font-medium">{t('ref_opex_battery_title')}</p>
+                                        <p className="pl-5">{t('ref_opex_battery_a')}</p>
+                                    </div>
+                                </div>
 
-                            <div className="space-y-1">
-                                <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_financial_q')}</h5>
-                                <p>{t('ref_financial_a')}</p>
-                                <ul className="list-disc pl-5 space-y-1">
-                                    <li><strong>{t('monthlyLoanInstallment')}:</strong> {t('ref_financial_loan')}</li>
-                                    <li><strong>{t('monthlyInsurance')}:</strong> {t('ref_financial_insurance')}</li>
-                                    <li><strong>{t('totalMonthlyFinancial')}:</strong> {t('ref_financial_total')}</li>
-                                </ul>
-                            </div>
-                            
-                            <Separator className="my-4" />
-                            
-                            <div className="space-y-6">
-                              <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">{t('ref_consumption_title')}</h4>
-                              
-                              {/* Diesel Table */}
-                              <div className="space-y-2">
-                                  <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_diesel_table_title')}</h5>
-                                  <div className="overflow-x-auto rounded-lg border dark:border-slate-700">
-                                      <table className="w-full text-left text-sm">
-                                          <thead className="bg-slate-50 dark:bg-slate-700/50">
-                                              <tr className="border-b dark:border-slate-700">
-                                                  <th className="p-2 font-medium">{t('ref_table_capacity')}</th>
-                                                  <th className="p-2 font-medium">{t('ref_table_application')}</th>
-                                                  <th className="p-2 font-medium">{t('ref_table_diesel_consumption')}</th>
-                                              </tr>
-                                          </thead>
-                                          <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                              <tr>
-                                                  <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">1.5 - 2.0</td>
-                                                  <td className="p-2">{t('ref_app_light')}</td>
-                                                  <td className="p-2">2.0 - 2.5</td>
-                                              </tr>
-                                              <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">2.5 - 3.0</td></tr>
-                                              <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">3.0 - 3.5</td></tr>
-                                              
-                                              <tr>
-                                                  <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">2.5 - 3.5</td>
-                                                  <td className="p-2">{t('ref_app_light')}</td>
-                                                  <td className="p-2">2.8 - 3.5</td>
-                                              </tr>
-                                              <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">3.5 - 4.5</td></tr>
-                                              <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">4.5 - 5.5</td></tr>
+                                <div className="space-y-1">
+                                    <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_esg_q')}</h5>
+                                    <p>{t('ref_esg_a')}</p>
+                                    <ul className="list-disc pl-5 space-y-1">
+                                        <li><strong>{t('diesel')}:</strong> {t('ref_esg_diesel')}</li>
+                                        <li><strong>{t('batteryElectric')}:</strong> {t('ref_esg_electric')}</li>
+                                    </ul>
+                                </div>
 
-                                              <tr>
-                                                  <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">4.0 - 5.0</td>
-                                                  <td className="p-2">{t('ref_app_light')}</td>
-                                                  <td className="p-2">4.0 - 5.0</td>
-                                              </tr>
-                                              <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">5.0 - 6.0</td></tr>
-                                              <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">6.0 - 7.0</td></tr>
-
-                                              <tr>
-                                                  <td className="p-2 border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">6.0 - 7.0</td>
-                                                  <td className="p-2">{t('ref_app_medium_heavy')}</td>
-                                                  <td className="p-2">7.0 - 9.0</td>
-                                              </tr>
-                                              <tr>
-                                                  <td className="p-2 border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">8.0 - 10.0</td>
-                                                  <td className="p-2">{t('ref_app_heavy')}</td>
-                                                  <td className="p-2">9.0 - 12.0</td>
-                                              </tr>
-                                          </tbody>
-                                      </table>
-                                  </div>
-                              </div>
-                              
-                              {/* Electric Table */}
-                              <div className="space-y-2">
-                                  <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_electric_table_title')}</h5>
-                                  <div className="overflow-x-auto rounded-lg border dark:border-slate-700">
-                                      <table className="w-full text-left text-sm">
-                                          <thead className="bg-slate-50 dark:bg-slate-700/50">
-                                              <tr className="border-b dark:border-slate-700">
-                                                  <th className="p-2 font-medium">{t('ref_table_capacity')}</th>
-                                                  <th className="p-2 font-medium">{t('ref_table_application')}</th>
-                                                  <th className="p-2 font-medium">{t('ref_table_electric_consumption')}</th>
-                                              </tr>
-                                          </thead>
-                                          <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                              <tr>
-                                                  <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">1.5 - 2.0</td>
-                                                  <td className="p-2">{t('ref_app_light')}</td>
-                                                  <td className="p-2">3.0 - 5.0</td>
-                                              </tr>
-                                              <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">5.0 - 7.0</td></tr>
-                                              <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">7.0 - 9.0</td></tr>
-                                              
-                                              <tr>
-                                                  <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">2.5 - 3.5</td>
-                                                  <td className="p-2">{t('ref_app_light')}</td>
-                                                  <td className="p-2">6.0 - 8.0</td>
-                                              </tr>
-                                              <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">8.0 - 11.0</td></tr>
-                                              <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">11.0 - 14.0</td></tr>
-
-                                              <tr>
-                                                  <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">4.0 - 5.0</td>
-                                                  <td className="p-2">{t('ref_app_light')}</td>
-                                                  <td className="p-2">9.0 - 12.0</td>
-                                              </tr>
-                                              <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">12.0 - 15.0</td></tr>
-                                              <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">15.0 - 18.0</td></tr>
-
-                                              <tr>
-                                                  <td className="p-2 border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">6.0 - 7.0</td>
-                                                  <td className="p-2">{t('ref_app_medium_heavy')}</td>
-                                                  <td className="p-2">18.0 - 22.0</td>
-                                              </tr>
-                                              <tr>
-                                                  <td className="p-2 border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">8.0 - 10.0</td>
-                                                  <td className="p-2">{t('ref_app_heavy')}</td>
-                                                  <td className="p-2">22.0 - 27.0</td>
-                                              </tr>
-                                          </tbody>
-                                      </table>
-                                  </div>
-                              </div>
-
-                              {/* Regional Price Guide Table */}
-                              <div className="space-y-2">
-                                  <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_regional_title')}</h5>
-                                  <p className="text-sm text-slate-600 dark:text-slate-400">{t('ref_regional_subtitle')}</p>
-                                  <div className="overflow-x-auto rounded-lg border dark:border-slate-700">
-                                      <table className="w-full text-left text-sm">
-                                          <thead className="bg-slate-50 dark:bg-slate-700/50">
-                                              <tr className="border-b dark:border-slate-700">
-                                                  <th className="p-2 font-medium">{t('ref_table_region')}</th>
-                                                  <th className="p-2 font-medium">{t('ref_table_currency')}</th>
-                                                  <th className="p-2 font-medium">{t('ref_table_diesel_price')}</th>
-                                                  <th className="p-2 font-medium">{t('ref_table_elec_price')}</th>
-                                              </tr>
-                                          </thead>
-                                          <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                            {REGIONAL_PRICES.map((item) => (
-                                                <tr key={item.region}>
-                                                    <td className="p-2 font-medium">{item.region}</td>
-                                                    <td className="p-2">{item.currency}</td>
-                                                    <td className="p-2">{item.diesel}</td>
-                                                    <td className="p-2">{item.electric}</td>
+                                <div className="space-y-1">
+                                    <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_financial_q')}</h5>
+                                    <p>{t('ref_financial_a')}</p>
+                                    <ul className="list-disc pl-5 space-y-1">
+                                        <li><strong>{t('monthlyLoanInstallment')}:</strong> {t('ref_financial_loan')}</li>
+                                        <li><strong>{t('monthlyInsurance')}:</strong> {t('ref_financial_insurance')}</li>
+                                        <li><strong>{t('totalMonthlyFinancial')}:</strong> {t('ref_financial_total')}</li>
+                                    </ul>
+                                </div>
+                                
+                                <Separator className="my-4" />
+                                
+                                <div className="space-y-6">
+                                <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">{t('ref_consumption_title')}</h4>
+                                
+                                {/* Diesel Table */}
+                                <div className="space-y-2">
+                                    <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_diesel_table_title')}</h5>
+                                    <div className="overflow-x-auto rounded-lg border dark:border-slate-700">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-slate-50 dark:bg-slate-700/50">
+                                                <tr className="border-b dark:border-slate-700">
+                                                    <th className="p-2 font-medium">{t('ref_table_capacity')}</th>
+                                                    <th className="p-2 font-medium">{t('ref_table_application')}</th>
+                                                    <th className="p-2 font-medium">{t('ref_table_diesel_consumption')}</th>
                                                 </tr>
-                                            ))}
-                                          </tbody>
-                                      </table>
-                                  </div>
-                              </div>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                                <tr>
+                                                    <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">1.5 - 2.0</td>
+                                                    <td className="p-2">{t('ref_app_light')}</td>
+                                                    <td className="p-2">2.0 - 2.5</td>
+                                                </tr>
+                                                <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">2.5 - 3.0</td></tr>
+                                                <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">3.0 - 3.5</td></tr>
+                                                
+                                                <tr>
+                                                    <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">2.5 - 3.5</td>
+                                                    <td className="p-2">{t('ref_app_light')}</td>
+                                                    <td className="p-2">2.8 - 3.5</td>
+                                                </tr>
+                                                <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">3.5 - 4.5</td></tr>
+                                                <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">4.5 - 5.5</td></tr>
+
+                                                <tr>
+                                                    <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">4.0 - 5.0</td>
+                                                    <td className="p-2">{t('ref_app_light')}</td>
+                                                    <td className="p-2">4.0 - 5.0</td>
+                                                </tr>
+                                                <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">5.0 - 6.0</td></tr>
+                                                <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">6.0 - 7.0</td></tr>
+
+                                                <tr>
+                                                    <td className="p-2 border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">6.0 - 7.0</td>
+                                                    <td className="p-2">{t('ref_app_medium_heavy')}</td>
+                                                    <td className="p-2">7.0 - 9.0</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="p-2 border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">8.0 - 10.0</td>
+                                                    <td className="p-2">{t('ref_app_heavy')}</td>
+                                                    <td className="p-2">9.0 - 12.0</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                {/* Electric Table */}
+                                <div className="space-y-2">
+                                    <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_electric_table_title')}</h5>
+                                    <div className="overflow-x-auto rounded-lg border dark:border-slate-700">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-slate-50 dark:bg-slate-700/50">
+                                                <tr className="border-b dark:border-slate-700">
+                                                    <th className="p-2 font-medium">{t('ref_table_capacity')}</th>
+                                                    <th className="p-2 font-medium">{t('ref_table_application')}</th>
+                                                    <th className="p-2 font-medium">{t('ref_table_electric_consumption')}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                                <tr>
+                                                    <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">1.5 - 2.0</td>
+                                                    <td className="p-2">{t('ref_app_light')}</td>
+                                                    <td className="p-2">3.0 - 5.0</td>
+                                                </tr>
+                                                <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">5.0 - 7.0</td></tr>
+                                                <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">7.0 - 9.0</td></tr>
+                                                
+                                                <tr>
+                                                    <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">2.5 - 3.5</td>
+                                                    <td className="p-2">{t('ref_app_light')}</td>
+                                                    <td className="p-2">6.0 - 8.0</td>
+                                                </tr>
+                                                <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">8.0 - 11.0</td></tr>
+                                                <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">11.0 - 14.0</td></tr>
+
+                                                <tr>
+                                                    <td rowSpan={3} className="p-2 align-top border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">4.0 - 5.0</td>
+                                                    <td className="p-2">{t('ref_app_light')}</td>
+                                                    <td className="p-2">9.0 - 12.0</td>
+                                                </tr>
+                                                <tr><td className="p-2">{t('ref_app_medium')}</td><td className="p-2">12.0 - 15.0</td></tr>
+                                                <tr><td className="p-2">{t('ref_app_heavy')}</td><td className="p-2">15.0 - 18.0</td></tr>
+
+                                                <tr>
+                                                    <td className="p-2 border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">6.0 - 7.0</td>
+                                                    <td className="p-2">{t('ref_app_medium_heavy')}</td>
+                                                    <td className="p-2">18.0 - 22.0</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="p-2 border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">8.0 - 10.0</td>
+                                                    <td className="p-2">{t('ref_app_heavy')}</td>
+                                                    <td className="p-2">22.0 - 27.0</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Regional Price Guide Table */}
+                                <div className="space-y-2">
+                                    <h5 className="font-semibold text-slate-800 dark:text-slate-200">{t('ref_regional_title')}</h5>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400">{t('ref_regional_subtitle')}</p>
+                                    <div className="overflow-x-auto rounded-lg border dark:border-slate-700">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-slate-50 dark:bg-slate-700/50">
+                                                <tr className="border-b dark:border-slate-700">
+                                                    <th className="p-2 font-medium">{t('ref_table_region')}</th>
+                                                    <th className="p-2 font-medium">{t('ref_table_currency')}</th>
+                                                    <th className="p-2 font-medium">{t('ref_table_diesel_price')}</th>
+                                                    <th className="p-2 font-medium">{t('ref_table_elec_price')}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                                {REGIONAL_PRICES.map((item) => (
+                                                    <tr key={item.region}>
+                                                        <td className="p-2 font-medium">{item.region}</td>
+                                                        <td className="p-2">{item.currency}</td>
+                                                        <td className="p-2">{item.diesel}</td>
+                                                        <td className="p-2">{item.electric}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                </div>
+
                             </div>
+                        </TabsContent>
+                        </Tabs>
+                    </CardContent>
+                    </Card>
 
+                    <Card className="rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 no-print">
+                    <CardContent className="p-6">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-100"><InfoIcon className="h-5 w-5"/> {t('advanced')}</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <SectionTitle title={t('dieselAdvanced')} />
+                        <LabeledNumber label={`${t('dieselMaint')} (${currencySymbol}/hr)`} value={dieselMaintRmPerHour} setValue={setDieselMaintRmPerHour} step={0.5} min={0} />
+                        
+                        <SectionTitle title={t('electricAdvanced')} />
+                        <LabeledNumber label={`${t('electricMaint')} (${currencySymbol}/hr)`} value={elecMaintRmPerHour} setValue={setElecMaintRmPerHour} step={0.5} min={0} />
+                        <LabeledNumber label={`${t('gridIntensity')} (kg/kWh)`} value={gridCO2Intensity} setValue={setGridCO2Intensity} step={0.01} min={0} />
+                        <LabeledNumber label={`${t('batteryVolt')} (V)`} value={batteryVolt} setValue={setBatteryVolt} step={1} min={12} />
+                        <LabeledNumber label={`${t('batteryAh')} (Ah)`} value={batteryAh} setValue={setBatteryAh} step={10} min={50} />
+                        <LabeledNumber label={`${t('usableDod')} (%)`} value={usableDoDPct} setValue={setUsableDoDPct} step={1} min={10} max={100} />
+                        <LabeledNumber label={t('cyclesTo80')} value={cyclesTo80} setValue={setCyclesTo80} step={100} min={100} />
+                        <LabeledNumber label={`${t('batteryCost')} (${currencySymbol})`} value={batteryReplacementCost} setValue={setBatteryReplacementCost} step={1000} min={0} />
+
+                        <SectionTitle title={t('financialCalculations')} />
+                        <LabeledNumber label={`${t('downpaymentPct')} (%)`} value={downpaymentPct} setValue={setDownpaymentPct} step={1} min={0} max={100} />
+                        <LabeledNumber label={`${t('loanTenureMonths')} (${t('months')})`} value={loanTenureMonths} setValue={setLoanTenureMonths} step={1} min={1} />
+                        <LabeledNumber label={`${t('annualInterestRatePct')} (%)`} value={annualInterestRatePct} setValue={setAnnualInterestRatePct} step={0.1} min={0} />
+                        <LabeledNumber label={`${t('annualInsuranceRM')} (${currencySymbol}/yr)`} value={annualInsuranceRM} setValue={setAnnualInsuranceRM} step={100} min={0} />
                         </div>
-                      </TabsContent>
-                    </Tabs>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                    </Card>
+                </div>
 
-                <Card className="rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 no-print">
-                  <CardContent className="p-6">
-                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-100"><InfoIcon className="h-5 w-5"/> {t('advanced')}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <SectionTitle title={t('dieselAdvanced')} />
-                      <LabeledNumber label={`${t('dieselMaint')} (${currencySymbol}/hr)`} value={dieselMaintRmPerHour} setValue={setDieselMaintRmPerHour} step={0.5} min={0} />
-                      
-                      <SectionTitle title={t('electricAdvanced')} />
-                      <LabeledNumber label={`${t('electricMaint')} (${currencySymbol}/hr)`} value={elecMaintRmPerHour} setValue={setElecMaintRmPerHour} step={0.5} min={0} />
-                      <LabeledNumber label={`${t('gridIntensity')} (kg/kWh)`} value={gridCO2Intensity} setValue={setGridCO2Intensity} step={0.01} min={0} />
-                      <LabeledNumber label={`${t('batteryVolt')} (V)`} value={batteryVolt} setValue={setBatteryVolt} step={1} min={12} />
-                      <LabeledNumber label={`${t('batteryAh')} (Ah)`} value={batteryAh} setValue={setBatteryAh} step={10} min={50} />
-                      <LabeledNumber label={`${t('usableDod')} (%)`} value={usableDoDPct} setValue={setUsableDoDPct} step={1} min={10} max={100} />
-                      <LabeledNumber label={t('cyclesTo80')} value={cyclesTo80} setValue={setCyclesTo80} step={100} min={100} />
-                      <LabeledNumber label={`${t('batteryCost')} (${currencySymbol})`} value={batteryReplacementCost} setValue={setBatteryReplacementCost} step={1000} min={0} />
+                <div id="print-area" className="space-y-6">
+                    <Card className="rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <CardContent className="p-6">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-100"><CalculatorIcon className="h-5 w-5"/> {t('fleetResults')}</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                        <SummaryCard title={t('diesel')}>
+                            <KV label={t('tcoMonth')} value={results.fmtCurrency(results.diesel.total_month)} />
+                            <KV label={t('tcoYear')} value={results.fmtCurrency(results.diesel.total_year)} />
+                            <Separator className="my-2" />
+                            <KV label={t('fuelUsedMonth')} value={`${results.diesel.diesel_L_month.toFixed(0)} L`} />
+                            <KV label={t('fuelCostMonth')} value={results.fmtCurrency(results.diesel.energy_cost_month)} />
+                            <KV label={t('maintCostMonth')} value={results.fmtCurrency(results.diesel.maint_cost_month)} />
+                            <Separator className="my-2" />
+                            <KV bold label={t('tco10Year')} value={results.fmtCurrency(results.diesel.tco_10_year)} />
+                        </SummaryCard>
+                        <SummaryCard title={t('batteryElectric')}>
+                            <KV label={t('tcoMonth')} value={results.fmtCurrency(results.electric.total_month)} />
+                            <KV label={t('tcoYear')} value={results.fmtCurrency(results.electric.total_year)} />
+                            <Separator className="my-2" />
+                            <KV label={t('energyUsedMonth')} value={`${results.electric.kWh_month.toFixed(0)} kWh`} />
+                            <KV label={t('energyCostMonth')} value={results.fmtCurrency(results.electric.energy_cost_month)} />
+                            <KV label={t('maintCostMonth')} value={results.fmtCurrency(results.electric.maint_cost_month)} />
+                            <KV label={t('batteryAmortMonth')} value={results.fmtCurrency(results.electric.amortized_battery_cost_month)} />
+                            <Separator className="my-2" />
+                            <KV label={t('cyclesPerMonth')} value={results.electric.cycles_per_month.toFixed(1)} />
+                            <KV label={t('estBatteryLife')} value={isFinite(results.electric.months_to_80) ? `${results.electric.months_to_80.toFixed(1)} ${t('months')}` : 'N/A'} />
+                            <KV label={t('estReplacements10Yr')} value={results.electric.num_replacements_10_years.toFixed(0)} />
+                            <Separator className="my-2" />
+                            <KV bold label={t('tco10Year')} value={results.fmtCurrency(results.electric.tco_10_year)} />
+                        </SummaryCard>
+                        </div>
+                        <Card className="mt-4 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50">
+                        <CardContent className="p-4 md:p-6">
+                            <h3 className="text-lg font-semibold mb-2 text-slate-900 dark:text-slate-100">{t('fleetSavingsTitle')}</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <InfoBlock label={t('monthlySavings')} value={results.fmtCurrency(results.savings.monthly_savings)} />
+                            <InfoBlock label={t('yearlySavings')} value={results.fmtCurrency(results.savings.yearly_savings)} />
+                            <InfoBlock label={t('paybackPeriod')} value={results.savings.payback_period_months > 0 ? `${results.savings.payback_period_months.toFixed(1)} ${t('months')}` : 'N/A'} />
+                            </div>
+                        </CardContent>
+                        </Card>
+                    </CardContent>
+                    </Card>
 
-                      <SectionTitle title={t('financialCalculations')} />
-                      <LabeledNumber label={`${t('downpaymentPct')} (%)`} value={downpaymentPct} setValue={setDownpaymentPct} step={1} min={0} max={100} />
-                      <LabeledNumber label={`${t('loanTenureMonths')} (${t('months')})`} value={loanTenureMonths} setValue={setLoanTenureMonths} step={1} min={1} />
-                      <LabeledNumber label={`${t('annualInterestRatePct')} (%)`} value={annualInterestRatePct} setValue={setAnnualInterestRatePct} step={0.1} min={0} />
-                      <LabeledNumber label={`${t('annualInsuranceRM')} (${currencySymbol}/yr)`} value={annualInsuranceRM} setValue={setAnnualInsuranceRM} step={100} min={0} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    <Card className="rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <CardContent className="p-6">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-100"><LeafIcon className="h-5 w-5"/> {t('esgTitle')}</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                        <SummaryCard title={`${t('diesel')} — ${t('emissionsMonth')}`}>
+                            <KV label={t('co2_kg')} value={results.esg.diesel_co2_kg_month.toFixed(1)} />
+                            <KV label={t('nox_g')} value={results.esg.diesel_nox_g_month.toFixed(1)} />
+                            <KV label={t('sox_g')} value={results.esg.diesel_sox_g_month.toFixed(1)} />
+                            <KV label={t('pm_g')} value={results.esg.diesel_pm_g_month.toFixed(1)} />
+                        </SummaryCard>
+                        <SummaryCard title={`${t('batteryElectric')} — ${t('emissionsMonth')}`}>
+                            <KV label={t('co2_kg')} value={results.esg.electric_co2_kg_month.toFixed(1)} />
+                            <KV label={t('nox_g')} value="0.0" />
+                            <KV label={t('sox_g')} value="0.0" />
+                            <KV label={t('pm_g')} value="0.0" />
+                        </SummaryCard>
+                        </div>
+                        <Card className="mt-4 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50">
+                        <CardContent className="p-4 md:p-6">
+                            <h3 className="text-lg font-semibold mb-2 text-slate-900 dark:text-slate-100">{t('envSavingsTitle')}</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <InfoBlock label={t('co2Reduction')} value={`${results.esg.co2_reduction_kg_month.toFixed(1)} kg`} />
+                            <InfoBlock label={t('otherPollutants')} value={`${(results.esg.diesel_nox_g_month + results.esg.diesel_sox_g_month + results.esg.diesel_pm_g_month).toFixed(1)} g`} />
+                            </div>
+                        </CardContent>
+                        </Card>
+                    </CardContent>
+                    </Card>
 
-              <div id="print-area" className="space-y-6">
-                <Card className="rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                  <CardContent className="p-6">
-                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-100"><CalculatorIcon className="h-5 w-5"/> {t('fleetResults')}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                       <SummaryCard title={t('diesel')}>
-                         <KV label={t('tcoMonth')} value={results.fmtCurrency(results.diesel.total_month)} />
-                         <KV label={t('tcoYear')} value={results.fmtCurrency(results.diesel.total_year)} />
-                         <Separator className="my-2" />
-                         <KV label={t('fuelUsedMonth')} value={`${results.diesel.diesel_L_month.toFixed(0)} L`} />
-                         <KV label={t('fuelCostMonth')} value={results.fmtCurrency(results.diesel.energy_cost_month)} />
-                         <KV label={t('maintCostMonth')} value={results.fmtCurrency(results.diesel.maint_cost_month)} />
-                         <Separator className="my-2" />
-                         <KV bold label={t('tco10Year')} value={results.fmtCurrency(results.diesel.tco_10_year)} />
-                       </SummaryCard>
-                       <SummaryCard title={t('batteryElectric')}>
-                         <KV label={t('tcoMonth')} value={results.fmtCurrency(results.electric.total_month)} />
-                         <KV label={t('tcoYear')} value={results.fmtCurrency(results.electric.total_year)} />
-                         <Separator className="my-2" />
-                         <KV label={t('energyUsedMonth')} value={`${results.electric.kWh_month.toFixed(0)} kWh`} />
-                         <KV label={t('energyCostMonth')} value={results.fmtCurrency(results.electric.energy_cost_month)} />
-                         <KV label={t('maintCostMonth')} value={results.fmtCurrency(results.electric.maint_cost_month)} />
-                         <KV label={t('batteryAmortMonth')} value={results.fmtCurrency(results.electric.amortized_battery_cost_month)} />
-                         <Separator className="my-2" />
-                         <KV label={t('cyclesPerMonth')} value={results.electric.cycles_per_month.toFixed(1)} />
-                         <KV label={t('estBatteryLife')} value={isFinite(results.electric.months_to_80) ? `${results.electric.months_to_80.toFixed(1)} ${t('months')}` : 'N/A'} />
-                         <KV label={t('estReplacements10Yr')} value={results.electric.num_replacements_10_years.toFixed(0)} />
-                         <Separator className="my-2" />
-                         <KV bold label={t('tco10Year')} value={results.fmtCurrency(results.electric.tco_10_year)} />
-                       </SummaryCard>
-                    </div>
-                     <Card className="mt-4 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50">
-                       <CardContent className="p-4 md:p-6">
-                         <h3 className="text-lg font-semibold mb-2 text-slate-900 dark:text-slate-100">{t('fleetSavingsTitle')}</h3>
-                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                           <InfoBlock label={t('monthlySavings')} value={results.fmtCurrency(results.savings.monthly_savings)} />
-                           <InfoBlock label={t('yearlySavings')} value={results.fmtCurrency(results.savings.yearly_savings)} />
-                           <InfoBlock label={t('paybackPeriod')} value={results.savings.payback_period_months > 0 ? `${results.savings.payback_period_months.toFixed(1)} ${t('months')}` : 'N/A'} />
-                         </div>
-                       </CardContent>
-                     </Card>
-                  </CardContent>
-                </Card>
+                    <Card className="rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <CardContent className="p-6">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-100"><DollarSignIcon className="h-5 w-5"/> {t('financialResults')}</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                        <SummaryCard title={t('diesel')}>
+                            <KV label={t('monthlyLoanInstallment')} value={results.fmtCurrency(results.financial.diesel.monthlyInstallment)} />
+                            <KV label={t('monthlyInsurance')} value={results.fmtCurrency(results.financial.diesel.monthlyInsurance)} />
+                            <Separator className="my-2" />
+                            <KV bold label={t('totalMonthlyFinancial')} value={results.fmtCurrency(results.financial.diesel.totalMonthly)} />
+                        </SummaryCard>
+                        <SummaryCard title={t('batteryElectric')}>
+                            <KV label={t('monthlyLoanInstallment')} value={results.fmtCurrency(results.financial.electric.monthlyInstallment)} />
+                            <KV label={t('monthlyInsurance')} value={results.fmtCurrency(results.financial.electric.monthlyInsurance)} />
+                            <Separator className="my-2" />
+                            <KV bold label={t('totalMonthlyFinancial')} value={results.fmtCurrency(results.financial.electric.totalMonthly)} />
+                        </SummaryCard>
+                        </div>
+                    </CardContent>
+                    </Card>
 
-                <Card className="rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                  <CardContent className="p-6">
-                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-100"><LeafIcon className="h-5 w-5"/> {t('esgTitle')}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                       <SummaryCard title={`${t('diesel')} — ${t('emissionsMonth')}`}>
-                         <KV label={t('co2_kg')} value={results.esg.diesel_co2_kg_month.toFixed(1)} />
-                         <KV label={t('nox_g')} value={results.esg.diesel_nox_g_month.toFixed(1)} />
-                         <KV label={t('sox_g')} value={results.esg.diesel_sox_g_month.toFixed(1)} />
-                         <KV label={t('pm_g')} value={results.esg.diesel_pm_g_month.toFixed(1)} />
-                       </SummaryCard>
-                       <SummaryCard title={`${t('batteryElectric')} — ${t('emissionsMonth')}`}>
-                         <KV label={t('co2_kg')} value={results.esg.electric_co2_kg_month.toFixed(1)} />
-                         <KV label={t('nox_g')} value="0.0" />
-                         <KV label={t('sox_g')} value="0.0" />
-                         <KV label={t('pm_g')} value="0.0" />
-                       </SummaryCard>
-                    </div>
-                     <Card className="mt-4 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50">
-                       <CardContent className="p-4 md:p-6">
-                         <h3 className="text-lg font-semibold mb-2 text-slate-900 dark:text-slate-100">{t('envSavingsTitle')}</h3>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <InfoBlock label={t('co2Reduction')} value={`${results.esg.co2_reduction_kg_month.toFixed(1)} kg`} />
-                           <InfoBlock label={t('otherPollutants')} value={`${(results.esg.diesel_nox_g_month + results.esg.diesel_sox_g_month + results.esg.diesel_pm_g_month).toFixed(1)} g`} />
-                         </div>
-                       </CardContent>
-                     </Card>
-                  </CardContent>
-                </Card>
+                </div>
+                </div>
+            )}
 
-                <Card className="rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                  <CardContent className="p-6">
-                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-100"><DollarSignIcon className="h-5 w-5"/> {t('financialResults')}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                       <SummaryCard title={t('diesel')}>
-                         <KV label={t('monthlyLoanInstallment')} value={results.fmtCurrency(results.financial.diesel.monthlyInstallment)} />
-                         <KV label={t('monthlyInsurance')} value={results.fmtCurrency(results.financial.diesel.monthlyInsurance)} />
-                         <Separator className="my-2" />
-                         <KV bold label={t('totalMonthlyFinancial')} value={results.fmtCurrency(results.financial.diesel.totalMonthly)} />
-                       </SummaryCard>
-                       <SummaryCard title={t('batteryElectric')}>
-                         <KV label={t('monthlyLoanInstallment')} value={results.fmtCurrency(results.financial.electric.monthlyInstallment)} />
-                         <KV label={t('monthlyInsurance')} value={results.fmtCurrency(results.financial.electric.monthlyInsurance)} />
-                         <Separator className="my-2" />
-                         <KV bold label={t('totalMonthlyFinancial')} value={results.fmtCurrency(results.financial.electric.totalMonthly)} />
-                       </SummaryCard>
-                    </div>
-                  </CardContent>
-                </Card>
+            {/* Load Calculator View */}
+            {currentView === 'load' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <LoadCalculator />
+                </div>
+            )}
 
-              </div>
-            </div>
             <footer className="mt-8 text-center text-xs text-slate-400 dark:text-slate-500">
-              <p>Version 1.3.6</p>
+              <p>Version 1.4.0</p>
             </footer>
           </div>
         </main>

@@ -69,3 +69,27 @@ export const UserIcon = (props: IconProps) => (
 export const TruckIcon = (props: IconProps) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}> <path d="M10 17h4V5H2v12h3"/> <path d="M20 17h-4.33A4.012 4.012 0 0 1 12 16.32V5h8v12h-1"/> <path d="M10 5L6 1"/> <path d="M12 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/> <path d="M22 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/> </svg>
 );
+
+export const RulerIcon = (props: IconProps) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}> <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0l12.6 12.6z"/> <line x1="14.5" x2="15.5" y1="12.5" y2="13.5"/> <line x1="11.5" x2="12.5" y1="9.5" y2="10.5"/> <line x1="8.5" x2="9.5" y1="6.5" y2="7.5"/> <line x1="5.5" x2="6.5" y1="3.5" y2="4.5"/> </svg>
+);
+
+export const WeightIcon = (props: IconProps) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}> <path d="M12 3V22"/> <path d="M5 22H19"/> <path d="M5 3H19"/> <path d="M9 3V22"/> <path d="M15 3V22"/> </svg>
+);
+
+export const AlertTriangleIcon = (props: IconProps) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}> <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/> <path d="M12 9v4"/> <path d="M12 17h.01"/> </svg>
+);
+
+export const CheckCircleIcon = (props: IconProps) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}> <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/> <polyline points="22 4 12 14.01 9 11.01"/> </svg>
+);
+
+export const LightbulbIcon = (props: IconProps) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}> <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2 1.5-3.5A6 6 0 0 0 6 8c0 1 .5 2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/> <path d="M9 18h6"/> <path d="M10 22h4"/> </svg>
+);
+
+export const ArrowRightIcon = (props: IconProps) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}> <path d="M5 12h14"/> <path d="m12 5 7 7-7 7"/> </svg>
+);
