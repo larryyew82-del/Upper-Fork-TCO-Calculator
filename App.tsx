@@ -8,10 +8,11 @@ import { Switch } from "./components/ui/Switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./components/ui/Select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/Tabs";
 import { Separator } from "./components/ui/Separator";
-import { InfoIcon, CalculatorIcon, RefreshCwIcon, LeafIcon, MoonIcon, SunIcon, FileDownIcon, Trash2Icon, MenuIcon, XIcon, DollarSignIcon, CheckIcon, SaveIcon, TruckIcon, WeightIcon } from "./components/icons";
+import { InfoIcon, CalculatorIcon, RefreshCwIcon, LeafIcon, MoonIcon, SunIcon, FileDownIcon, Trash2Icon, MenuIcon, XIcon, DollarSignIcon, CheckIcon, SaveIcon, TruckIcon, WeightIcon, TrendingUpIcon } from "./components/icons";
 import { useLanguage } from "./contexts/LanguageContext";
 import { useTheme } from "./contexts/ThemeContext";
 import LoadCalculator from "./components/LoadCalculator";
+import GradeabilityCalculator from "./components/GradeabilityCalculator";
 
 // --- Helper Components ---
 
@@ -132,7 +133,7 @@ export default function App() {
   const [currency, setCurrency] = useState('MYR');
   
   // Navigation State
-  const [currentView, setCurrentView] = useState<'tco' | 'load'>('tco');
+  const [currentView, setCurrentView] = useState<'tco' | 'load' | 'grade'>('tco');
 
   const currencySymbol = CURRENCIES[currency].symbol;
 
@@ -438,6 +439,7 @@ export default function App() {
                          <div className="flex gap-4 mt-1 md:hidden text-xs">
                              <button onClick={() => setCurrentView('tco')} className={`${currentView === 'tco' ? 'text-blue-600 font-bold dark:text-blue-400' : 'text-slate-500'}`}>{t('tcoCalc')}</button>
                              <button onClick={() => setCurrentView('load')} className={`${currentView === 'load' ? 'text-blue-600 font-bold dark:text-blue-400' : 'text-slate-500'}`}>{t('loadCalc')}</button>
+                             <button onClick={() => setCurrentView('grade')} className={`${currentView === 'grade' ? 'text-blue-600 font-bold dark:text-blue-400' : 'text-slate-500'}`}>{t('gradeCalc')}</button>
                          </div>
                     </div>
                 </div>
@@ -452,6 +454,10 @@ export default function App() {
                          <button onClick={() => setCurrentView('load')} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${currentView === 'load' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
                              <WeightIcon className="h-4 w-4"/>
                             {t('loadCalc')}
+                         </button>
+                         <button onClick={() => setCurrentView('grade')} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${currentView === 'grade' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
+                             <TrendingUpIcon className="h-4 w-4"/>
+                            {t('gradeCalc')}
                          </button>
                     </div>
 
@@ -863,8 +869,15 @@ export default function App() {
                 </div>
             )}
 
+            {/* Gradeability Calculator View */}
+            {currentView === 'grade' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <GradeabilityCalculator />
+                </div>
+            )}
+
             <footer className="mt-8 text-center text-xs text-slate-400 dark:text-slate-500">
-              <p>Version 1.4.0</p>
+              <p>Version 1.5.0</p>
             </footer>
           </div>
         </main>

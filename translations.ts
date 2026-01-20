@@ -57,6 +57,7 @@ export const translations = {
     currency: 'Currency',
     tcoCalc: 'TCO Calculator',
     loadCalc: 'Load Calculator',
+    gradeCalc: 'Grade Calc',
 
     // Scenario Management
     savedScenarios: 'Saved Scenarios',
@@ -258,6 +259,35 @@ export const translations = {
     type_paper_clamp: 'Paper Roll Clamp',
     type_push_pull: 'Push / Pull',
     type_custom: 'Custom',
+
+    // Gradeability Calculator
+    gradeCalcTitle: 'Upperfork Grade Calc',
+    rampParams: 'Ramp Parameters',
+    rampRise: 'Ramp Rise / Height (mm)',
+    rampRun: 'Ramp Run / Length (mm)',
+    loadStatus: 'Load Status',
+    statusLoaded: 'Loaded (Full)',
+    statusEmpty: 'Unloaded (Empty)',
+    surfaceCondition: 'Surface Condition',
+    surfDryConcrete: 'Dry Concrete (Best)',
+    surfWetConcrete: 'Wet Concrete',
+    surfAsphalt: 'Asphalt',
+    surfGravel: 'Loose Gravel / Sand',
+    analyzeGrade: 'ANALYZE GRADE',
+    gradeResult: 'Grade Result',
+    calculatedGrade: 'Calculated Grade',
+    gradeAngle: 'Slope Angle',
+    statusGo: 'SAFE TO CLIMB',
+    statusCaution: 'CAUTION / MARGINAL',
+    statusStop: 'UNSAFE / TOO STEEP',
+    maxGradeForMachine: 'Max Grade for this Machine',
+    surfaceFactor: 'Surface Traction Factor',
+    gradeWarningTitle: 'Steep Slope Warning',
+    gradeWarningText: 'The calculated grade of {grade}% exceeds the recommended limit of {limit}% for a {load} {type} on this surface.',
+    clearanceWarning: 'Ground Clearance Warning',
+    clearanceWarningText: 'Steep ramps (>15%) may cause "bottoming out" at the crest or base. Check break-over angle.',
+    optReachTruck: 'Reach Truck',
+    opt3Wheel: '3-Wheel Electric',
   },
   zh: {
     // Auth
@@ -317,6 +347,7 @@ export const translations = {
     currency: '货币',
     tcoCalc: 'TCO 计算器',
     loadCalc: '载荷计算器',
+    gradeCalc: '爬坡计算器',
     
     // Scenario Management
     savedScenarios: '已保存的方案',
@@ -359,7 +390,7 @@ export const translations = {
     batteryVolt: '电池电压',
     batteryAh: '电池容量',
     usableDod: '可用放电深度',
-    cyclesTo80: '循环次数至80% SOH',
+    cyclesTo80: 'Cycles to 80% SOH',
     batteryCost: '电池成本',
 
     // Financial Inputs
@@ -518,5 +549,34 @@ export const translations = {
     type_paper_clamp: '纸卷夹',
     type_push_pull: '推拉器',
     type_custom: '自定义',
+
+    // Gradeability Calculator
+    gradeCalcTitle: 'Upperfork Grade Calc',
+    rampParams: '坡道参数',
+    rampRise: '坡道高度 (mm)',
+    rampRun: '坡道水平长度 (mm)',
+    loadStatus: '负载状态',
+    statusLoaded: '满载',
+    statusEmpty: '空载',
+    surfaceCondition: '地面状况',
+    surfDryConcrete: '干燥混凝土 (最佳)',
+    surfWetConcrete: '潮湿混凝土',
+    surfAsphalt: '沥青路面',
+    surfGravel: '松散砂石',
+    analyzeGrade: '分析坡度',
+    gradeResult: '坡度结果',
+    calculatedGrade: '计算坡度',
+    gradeAngle: '坡道角度',
+    statusGo: '安全攀爬',
+    statusCaution: '警告 / 临界',
+    statusStop: '危险 / 太陡',
+    maxGradeForMachine: '该机型最大坡度',
+    surfaceFactor: '地面牵引系数',
+    gradeWarningTitle: '陡坡警告',
+    gradeWarningText: '计算坡度为 {grade}%，超过了 {load} {type} 在此地面上的建议极限 {limit}%。',
+    clearanceWarning: '离地间隙警告',
+    clearanceWarningText: '陡坡 (>15%) 可能会在坡顶或坡底导致“托底”。请检查通过角。',
+    optReachTruck: '前移式叉车',
+    opt3Wheel: '三支点电动叉车',
   }
 };
